@@ -4,9 +4,11 @@
 [![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791?logo=postgresql)](https://www.postgresql.org/)
-[![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com/)
+[![Vercel](https://img.shields.io/badge/Live_Demo-Vercel-black?logo=vercel)](https://retail-management-coral.vercel.app)
 
 A high-performance, multi-tenant cloud SaaS for local retail businesses (electronics, supermarkets, pharmacies, apparel, hardware). OmniRetail delivers sub-100ms barcode scanning, offline-resilient POS billing with IndexedDB synchronization, immutable double-entry stock ledgers, branch-to-branch inventory transfers, automated Goods Received Notes (GRN), and strict database-layer Row-Level Security (RLS).
+
+🔗 **Live Production URL:** [https://retail-management-coral.vercel.app](https://retail-management-coral.vercel.app)
 
 ---
 
