@@ -44,6 +44,18 @@ export function POSView() {
   // Variant selector state
   const [selectedProductForVariant, setSelectedProductForVariant] = useState<Product | null>(null);
 
+  // Keyboard shortcut: [F2] opens the charge / checkout flow when a ticket is active
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F2' && !isCheckoutOpen && !isReceiptOpen && cart.length > 0) {
+        e.preventDefault();
+        setIsCheckoutOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCheckoutOpen, isReceiptOpen, cart.length]);
+
   if (!activeTenant || !activeBranch) {
     return <div className="p-8 text-center text-zinc-500">Loading terminal context...</div>;
   }
@@ -427,6 +439,9 @@ export function POSView() {
           >
             <CreditCard className="h-4 w-4" />
             <span>Charge {formatCurrency(totalAmount, symbol)}</span>
+            <kbd className="ml-1 hidden rounded border border-white/30 bg-white/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white/90 sm:inline">
+              F2
+            </kbd>
           </button>
         </div>
       </div>
