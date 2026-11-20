@@ -1,0 +1,241 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id         String    @id @default(uuid())
+  name       String
+  slug       String    @unique
+  plan       String    @default("STARTER")
+  status     String    @default("ACTIVE")
+  settings   Json
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  branches   Branch[]
+  users      User[]
+  categories Category[]
+  products   Product[]
+  sales      Sale[]
+  ledger     StockLedger[]
+  audit_logs AuditLog[]
+
+  @@map("tenants")
+}
+
+model Branch {
+  id         String    @id @default(uuid())
+  tenant_id  String
+  tenant     Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  name       String
+  code       String
+  address    String
+  phone      String?
+  is_main    Boolean   @default(false)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  users   User[]
+  sales   Sale[]
+  ledger  StockLedger[]
+
+  @@unique([tenant_id, code])
+  @@index([tenant_id])
+  @@map("branches")
+}
+
+model User {
+  id         String    @id @default(uuid())
+  tenant_id  String
+  tenant     Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  branch_id  String?
+  branch     Branch?   @relation(fields: [branch_id], references: [id], onDelete: SetNull)
+  name       String
+  email      String
+  role       String
+  pin        String?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@unique([tenant_id, email])
+  @@index([tenant_id])
+  @@map("users")
+}
+
+model Category {
+  id         String    @id @default(uuid())
+  tenant_id  String
+  tenant     Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  name       String
+  slug       String
+  icon       String?
+  created_at DateTime  @default(now())
+
+  products   Product[]
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id])
+  @@map("categories")
+}
+
+model Product {
+  id                 String           @id @default(uuid())
+  tenant_id          String
+  tenant             Tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  category_id        String?
+  category           Category?        @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  sku                String
+  barcode            String
+  name               String
+  unit_of_measure    String           @default("pcs")
+  cost_price         Decimal          @db.Decimal(14, 4)
+  retail_price       Decimal          @db.Decimal(14, 4)
+  reorder_level      Int              @default(5)
+  image_url          String?
+  has_variants       Boolean          @default(false)
+  track_batch_expiry Boolean          @default(false)
+  created_at         DateTime         @default(now())
+  updated_at         DateTime         @updatedAt
+  deleted_at         DateTime?
+
+  variants           ProductVariant[]
+  batches            ProductBatch[]
+  ledger             StockLedger[]
+
+  @@unique([tenant_id, sku])
+  @@unique([tenant_id, barcode])
+  @@index([tenant_id, barcode])
+  @@index([tenant_id, sku])
+  @@map("products")
+}
+
+model ProductVariant {
+  id           String   @id @default(uuid())
+  tenant_id    String
+  product_id   String
+  product      Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  sku          String
+  barcode      String
+  name         String
+  cost_price   Decimal  @db.Decimal(14, 4)
+  retail_price Decimal  @db.Decimal(14, 4)
+  created_at   DateTime @default(now())
+
+  @@unique([tenant_id, sku])
+  @@unique([tenant_id, barcode])
+  @@index([tenant_id, product_id])
+  @@map("product_variants")
+}
+
+model ProductBatch {
+  id                 String    @id @default(uuid())
+  tenant_id          String
+  branch_id          String
+  product_id         String
+  product            Product   @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  batch_number       String
+  manufacturing_date DateTime?
+  expiry_date        DateTime
+  quantity           Decimal   @db.Decimal(14, 4)
+  cost_price         Decimal   @db.Decimal(14, 4)
+  created_at         DateTime  @default(now())
+
+  @@index([tenant_id, branch_id, product_id, expiry_date])
+  @@map("product_batches")
+}
+
+model StockLedger {
+  id                 String   @id @default(uuid())
+  tenant_id          String
+  tenant             Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  branch_id          String
+  branch             Branch   @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  product_id         String
+  product            Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  variant_id         String?
+  movement_type      String
+  quantity_delta     Decimal  @db.Decimal(14, 4)
+  balance_after      Decimal  @db.Decimal(14, 4)
+  cost_price_at_time Decimal  @db.Decimal(14, 4)
+  reference_id       String
+  notes              String?
+  created_by_user    String
+  created_at         DateTime @default(now())
+
+  @@index([tenant_id, branch_id, product_id, created_at])
+  @@map("stock_ledger")
+}
+
+model Sale {
+  id               String     @id @default(uuid())
+  tenant_id        String
+  tenant           Tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  branch_id        String
+  branch           Branch     @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  invoice_number   String
+  idempotency_key  String     @unique
+  cashier_id       String
+  cashier_name     String
+  customer_name    String?
+  customer_phone   String?
+  subtotal         Decimal    @db.Decimal(14, 4)
+  discount_amount  Decimal    @default(0) @db.Decimal(14, 4)
+  discount_percent Decimal    @default(0) @db.Decimal(5, 2)
+  tax_rate         Decimal    @default(0) @db.Decimal(5, 2)
+  tax_amount       Decimal    @default(0) @db.Decimal(14, 4)
+  total_amount     Decimal    @db.Decimal(14, 4)
+  change_given     Decimal    @default(0) @db.Decimal(14, 4)
+  status           String     @default("COMPLETED")
+  created_at       DateTime   @default(now())
+
+  items            SaleItem[]
+
+  @@unique([tenant_id, invoice_number])
+  @@index([tenant_id, branch_id, created_at])
+  @@map("sales")
+}
+
+model SaleItem {
+  id           String   @id @default(uuid())
+  tenant_id    String
+  sale_id      String
+  sale         Sale     @relation(fields: [sale_id], references: [id], onDelete: Cascade)
+  product_id   String
+  variant_id   String?
+  product_name String
+  sku          String
+  barcode      String
+  unit_price   Decimal  @db.Decimal(14, 4)
+  cost_price   Decimal  @db.Decimal(14, 4)
+  quantity     Decimal  @db.Decimal(14, 4)
+  total_price  Decimal  @db.Decimal(14, 4)
+  batch_number String?
+
+  @@index([tenant_id, sale_id])
+  @@map("sale_items")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  tenant_id  String
+  tenant     Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user_id    String
+  user_name  String
+  action     String
+  details    String
+  old_value  String?
+  new_value  String?
+  ip_address String
+  created_at DateTime @default(now())
+
+  @@index([tenant_id, created_at])
+  @@map("audit_logs")
+}
