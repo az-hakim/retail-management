@@ -10,7 +10,7 @@ interface ProductModalProps {
 }
 
 export function ProductModal({ isOpen, onClose }: ProductModalProps) {
-  const { activeTenant, categories, branches, userRole, userName, refreshAllData } = useApp();
+  const { activeTenant, categories, branches, refreshAllData } = useApp();
 
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
@@ -40,8 +40,6 @@ export function ProductModal({ isOpen, onClose }: ProductModalProps) {
         headers: {
           'Content-Type': 'application/json',
           'X-Tenant-ID': activeTenant.id,
-          'X-User-Role': userRole,
-          'X-User-Name': userName,
         },
         body: JSON.stringify({
           sku,

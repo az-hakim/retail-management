@@ -12,7 +12,7 @@ You are an AI software architect and full-stack engineer building a **Multi-Tena
 * **Tenant Identifier:** Every tenant-scoped table MUST include a non-nullable `tenant_id` (`UUID`, indexed) referencing `tenants(id)`.
 * **Subdomain / Path Routing:**
   * Support custom subdomains (`{shop-slug}.retailapp.com`) and fallback path routing (`app.retailapp.com/{shop-slug}`).
-  * Middleware MUST resolve `tenant_id` from the authenticated JWT claim or subdomain header before executing any controller logic.
+  * Middleware MUST resolve `tenant_id` from the authenticated session before executing any controller logic. Tenant membership (not a header or body value) determines which tenants a user may act in; see `docs/authentication.md`.
 
 ### 2.2 Security & Data Leakage Prevention
 * **Zero-Trust Queries:** Never trust `tenant_id` passed in the request body or query parameters from the client. Always extract `tenant_id` from the verified session/JWT token.
@@ -126,11 +126,12 @@ DATABASE_POOL_MAX=25
 # Redis (Caching & BullMQ)
 REDIS_URL=redis://localhost:6379
 
-# Authentication & Security
-JWT_ACCESS_SECRET=change_me_strong_secret
-JWT_REFRESH_SECRET=change_me_refresh_secret
-JWT_ACCESS_TTL=15m
-JWT_REFRESH_TTL=7d
+# Authentication & Security (implemented)
+# 32+ characters; required in production. Generate with: openssl rand -hex 32
+AUTH_SESSION_SECRET=change_me_strong_secret
+AUTH_SESSION_TTL_HOURS=12
+# Password for seeded demo accounts. Unset in production = unusable demo accounts.
+AUTH_SEED_PASSWORD=
 
 # Object Storage (S3 / R2)
 S3_BUCKET=retail-saas-assets
@@ -148,7 +149,7 @@ BILLING_WEBHOOK_SECRET=whsec_xxx
 ## 9. AI Coding Agent Guardrails & Instructions
 
 When generating code for this repository, strictly adhere to the following rules:
-1. **Tenant Context Middleware:** Every new route/endpoint MUST explicitly declare whether it is `Public`, `TenantScoped`, or `SuperAdminOnly`. Default to `TenantScoped`.
+1. **Tenant Context Middleware:** Every new route/endpoint MUST explicitly declare whether it is `Public`, `TenantScoped`, or `SuperAdminOnly`. Default to `TenantScoped`. Identity (user, role, tenant, branch) MUST come from the verified session via `getTenantContext()` — never from request bodies, query strings or `x-user-*` headers. Only `POST /api/auth/login`, `POST /api/auth/logout` and `GET /api/auth/session` are exempt from the session requirement.
 2. **Idempotency:** All POS checkout, stock transfer, and payment endpoints MUST require an `X-Idempotency-Key` header to prevent duplicate inventory deductions on flaky retail internet connections.
 3. **Transactional Integrity:** Any operation modifying stock levels and financial ledgers MUST execute inside a single ACID database transaction (`BEGIN ... COMMIT`).
 4. **Audit Logging:** Any manual price override, discount above 10%, voided invoice, or manual stock adjustment MUST write an entry to `audit_logs` capturing `user_id`, `ip_address`, `old_value`, and `new_value`.

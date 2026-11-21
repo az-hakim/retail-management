@@ -55,13 +55,35 @@ export interface Branch {
   is_main: boolean;
 }
 
+export interface UserMembership {
+  tenant_id: string;
+  role: UserRole;
+  /** When set, this membership is limited to a single branch. */
+  branch_id?: string;
+}
+
 export interface User {
   id: string;
+  /** Primary tenant (used as the default tenant after sign-in). */
   tenant_id: string;
   branch_id?: string;
   name: string;
   email: string;
   role: UserRole;
+  is_active: boolean;
+  memberships: UserMembership[];
+  /** scrypt hash. Never serialized to clients. */
+  password_hash?: string;
+}
+
+export interface SessionUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  tenant_id: string;
+  branch_id?: string;
+  memberships: UserMembership[];
 }
 
 export interface Category {

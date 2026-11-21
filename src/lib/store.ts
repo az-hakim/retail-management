@@ -14,11 +14,13 @@ import {
   PaymentEntry,
 } from '@/types';
 import { generateUUIDv7 } from './utils';
+import { hashPassword, verifyPassword, DUMMY_PASSWORD_HASH } from './auth/password';
+import { normalizeEmail } from './auth/login-throttle';
 
 // Global in-memory storage (persisted across requests during server lifetime)
 // Can be backed by PostgreSQL / Prisma when DATABASE_URL is present.
 
-interface StoreData {
+export interface StoreData {
   tenants: Tenant[];
   branches: Branch[];
   users: User[];
@@ -165,6 +167,13 @@ function initializeSeedData(): StoreData {
     },
   ];
 
+  // Seed accounts share one password so the demo can be signed into.
+  // In production a real secret is required; otherwise a random per-boot
+  // password is generated and the accounts are effectively unusable.
+  const seedPassword =
+    process.env.AUTH_SEED_PASSWORD ||
+    (process.env.NODE_ENV === 'production' ? generateUUIDv7() + generateUUIDv7() : 'DemoPass123!');
+
   const users: User[] = [
     {
       id: '018dc600-7010-7000-8000-000000000001',
@@ -172,6 +181,9 @@ function initializeSeedData(): StoreData {
       name: 'Alexander Wright',
       email: 'alex@apexgear.com',
       role: 'TENANT_OWNER',
+      is_active: true,
+      memberships: [{ tenant_id: t1Id, role: 'TENANT_OWNER' }],
+      password_hash: hashPassword(seedPassword),
     },
     {
       id: '018dc600-7010-7000-8000-000000000002',
@@ -180,6 +192,9 @@ function initializeSeedData(): StoreData {
       name: 'Sarah Chen',
       email: 'sarah.cashier@apexgear.com',
       role: 'CASHIER',
+      is_active: true,
+      memberships: [{ tenant_id: t1Id, role: 'CASHIER', branch_id: b1_t1 }],
+      password_hash: hashPassword(seedPassword),
     },
     {
       id: '018dc600-7010-7000-8000-000000000003',
@@ -187,6 +202,39 @@ function initializeSeedData(): StoreData {
       name: 'Marcus Vance',
       email: 'marcus.stock@apexgear.com',
       role: 'INVENTORY_CLERK',
+      is_active: true,
+      memberships: [{ tenant_id: t1Id, role: 'INVENTORY_CLERK' }],
+      password_hash: hashPassword(seedPassword),
+    },
+    {
+      id: '018dc600-7010-7000-8000-000000000004',
+      tenant_id: t2Id,
+      name: 'Priya Raman',
+      email: 'owner@freshmart.com',
+      role: 'TENANT_OWNER',
+      is_active: true,
+      memberships: [{ tenant_id: t2Id, role: 'TENANT_OWNER' }],
+      password_hash: hashPassword(seedPassword),
+    },
+    {
+      id: '018dc600-7010-7000-8000-000000000005',
+      tenant_id: t3Id,
+      name: 'Rachel Patel',
+      email: 'owner@novapharma.com',
+      role: 'TENANT_OWNER',
+      is_active: true,
+      memberships: [{ tenant_id: t3Id, role: 'TENANT_OWNER' }],
+      password_hash: hashPassword(seedPassword),
+    },
+    {
+      id: '018dc600-7010-7000-8000-000000000006',
+      tenant_id: t1Id,
+      name: 'Platform Admin',
+      email: 'admin@omniretail.app',
+      role: 'SUPER_ADMIN',
+      is_active: true,
+      memberships: [],
+      password_hash: hashPassword(seedPassword),
     },
   ];
 
@@ -774,6 +822,30 @@ export const db = {
 
   getTenant(id: string): Tenant | undefined {
     return store.tenants.find(t => t.id === id);
+  },
+
+  // USERS & CREDENTIALS
+  findUserByEmail(email: string): User | undefined {
+    const normalized = normalizeEmail(email);
+    return store.users.find(u => u.email.toLowerCase() === normalized);
+  },
+
+  getUserById(id: string): User | undefined {
+    return store.users.find(u => u.id === id);
+  },
+
+  /**
+   * Verifies credentials. Always performs a scrypt comparison, even for unknown
+   * accounts, so response timing does not reveal which emails exist.
+   */
+  authenticate(email: string, password: string): User | null {
+    const user = this.findUserByEmail(email);
+    if (!user || !user.is_active) {
+      verifyPassword(password, DUMMY_PASSWORD_HASH);
+      return null;
+    }
+    if (!verifyPassword(password, user.password_hash)) return null;
+    return user;
   },
 
   updateTenantSettings(tenantId: string, settings: Partial<Tenant['settings']>): Tenant {

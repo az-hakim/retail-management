@@ -5,7 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { Save, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 
 export function SettingsView() {
-  const { activeTenant, branches, products, userRole, userName, refreshAllData } = useApp();
+  const { activeTenant, branches, products, refreshAllData } = useApp();
 
   const [currencySymbol, setCurrencySymbol] = useState(activeTenant?.settings.currency_symbol || '$');
   const [taxEnabled, setTaxEnabled] = useState(activeTenant?.settings.tax_config.enabled ?? true);
@@ -47,8 +47,6 @@ export function SettingsView() {
         headers: {
           'Content-Type': 'application/json',
           'X-Tenant-ID': activeTenant.id,
-          'X-User-Role': userRole,
-          'X-User-Name': userName,
         },
         body: JSON.stringify({
           settings: {

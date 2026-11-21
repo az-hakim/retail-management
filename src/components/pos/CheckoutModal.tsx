@@ -159,8 +159,6 @@ export function CheckoutModal({
           'Content-Type': 'application/json',
           'X-Tenant-ID': activeTenant.id,
           'X-Idempotency-Key': idempotencyKey,
-          'X-User-Role': userRole,
-          'X-User-Name': userName,
         },
         body: JSON.stringify(checkoutPayload),
       });

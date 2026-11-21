@@ -11,7 +11,7 @@ interface NewPOModalProps {
 }
 
 export function NewPOModal({ isOpen, onClose }: NewPOModalProps) {
-  const { activeTenant, branches, suppliers, products, userRole, userName, refreshAllData } = useApp();
+  const { activeTenant, branches, suppliers, products, refreshAllData } = useApp();
 
   const [branchId, setBranchId] = useState(branches[0]?.id || '');
   const [supplierId, setSupplierId] = useState(suppliers[0]?.id || '');
@@ -60,8 +60,6 @@ export function NewPOModal({ isOpen, onClose }: NewPOModalProps) {
         headers: {
           'Content-Type': 'application/json',
           'X-Tenant-ID': activeTenant.id,
-          'X-User-Role': userRole,
-          'X-User-Name': userName,
         },
         body: JSON.stringify({
           branch_id: branchId,

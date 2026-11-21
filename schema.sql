@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS branches (
 CREATE INDEX IF NOT EXISTS idx_branches_tenant_id ON branches(tenant_id);
 
 -- 4. Users & Staff Table
+-- `tenant_id` is the user's primary (default) tenant. Multi-tenant access is
+-- granted through `user_memberships` below — never through a role column claim.
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -61,14 +63,35 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL, -- SUPER_ADMIN, TENANT_OWNER, BRANCH_MANAGER, CASHIER, INVENTORY_CLERK
+    -- scrypt hash in the form scrypt$N$r$p$salt$derivedKey. Never store plaintext.
+    password_hash TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     pin VARCHAR(10),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
-    CONSTRAINT uq_users_tenant_email UNIQUE (tenant_id, email)
+    -- One account per email address; tenant scope comes from user_memberships.
+    CONSTRAINT uq_users_email UNIQUE (email)
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(LOWER(email));
+
+-- 4b. Tenant Memberships (authorization source of truth)
+-- A user can belong to several tenants with a different role in each. A
+-- membership carrying `branch_id` is limited to that single branch.
+CREATE TABLE IF NOT EXISTS user_memberships (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL,
+    branch_id UUID REFERENCES branches(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_membership_user_tenant UNIQUE (user_id, tenant_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_memberships_tenant_id ON user_memberships(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_user_memberships_user_id ON user_memberships(user_id);
 
 -- 5. Categories Table
 CREATE TABLE IF NOT EXISTS categories (
@@ -243,6 +266,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_date ON audit_logs(tenant_id, c
 -- Enable RLS on all tenant-scoped tables
 ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_variants ENABLE ROW LEVEL SECURITY;
@@ -258,6 +282,9 @@ CREATE POLICY tenant_isolation_branches ON branches
     USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::UUID);
 
 CREATE POLICY tenant_isolation_users ON users
+    USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::UUID);
+
+CREATE POLICY tenant_isolation_user_memberships ON user_memberships
     USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::UUID);
 
 CREATE POLICY tenant_isolation_categories ON categories

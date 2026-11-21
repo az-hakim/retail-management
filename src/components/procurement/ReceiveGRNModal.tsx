@@ -12,7 +12,7 @@ interface ReceiveGRNModalProps {
 }
 
 export function ReceiveGRNModal({ isOpen, onClose, purchaseOrder }: ReceiveGRNModalProps) {
-  const { activeTenant, userRole, userName, refreshAllData } = useApp();
+  const { activeTenant, refreshAllData } = useApp();
 
   const [receivedMap, setReceivedMap] = useState<
     Record<string, { qty: number; batch?: string; expiry?: string }>
@@ -53,8 +53,6 @@ export function ReceiveGRNModal({ isOpen, onClose, purchaseOrder }: ReceiveGRNMo
         headers: {
           'Content-Type': 'application/json',
           'X-Tenant-ID': activeTenant.id,
-          'X-User-Role': userRole,
-          'X-User-Name': userName,
         },
         body: JSON.stringify({
           po_id: purchaseOrder.id,

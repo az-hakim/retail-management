@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/store';
-import { getTenantContext } from '@/lib/tenant-context';
+import { getTenantContext, branchScopeError } from '@/lib/tenant-context';
+import { isBranchAllowed } from '@/lib/authz';
 
-// Scope: TenantScoped
-// Requirements: Role check, Mandatory reason, Audit logging
+// Scope: Authenticated (tenant + branch scoped)
+// Requirements: Role check, mandatory reason, audit logging
 export async function POST(req: NextRequest) {
-  const { error, context } = getTenantContext(req, {
+  const { error, context } = await getTenantContext(req, {
     requiredRole: ['TENANT_OWNER', 'BRANCH_MANAGER', 'INVENTORY_CLERK'],
   });
   if (error || !context) return error;
@@ -13,9 +14,16 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    if (!body.reason || body.reason.trim().length < 5) {
+    if (!isBranchAllowed(context.access, body?.branch_id)) {
+      return branchScopeError(body?.branch_id);
+    }
+
+    if (!body.reason || String(body.reason).trim().length < 5) {
       return NextResponse.json(
-        { error: 'InvalidReason', message: 'A descriptive reason (min 5 characters) is mandatory for audit logging.' },
+        {
+          error: 'InvalidReason',
+          message: 'A descriptive reason (min 5 characters) is mandatory for audit logging.',
+        },
         { status: 400 }
       );
     }
@@ -26,12 +34,13 @@ export async function POST(req: NextRequest) {
       variant_id: body.variant_id,
       new_quantity: Number(body.new_quantity),
       reason: body.reason,
-      user: context.user,
+      user: { id: context.user.id, name: context.user.name },
       ip_address: context.clientIp,
     });
 
     return NextResponse.json({ success: true, ...result });
-  } catch (err: any) {
-    return NextResponse.json({ error: 'AdjustmentFailed', message: err.message }, { status: 400 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Stock adjustment failed.';
+    return NextResponse.json({ error: 'AdjustmentFailed', message }, { status: 400 });
   }
 }

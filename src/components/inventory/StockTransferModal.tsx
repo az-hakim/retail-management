@@ -10,7 +10,7 @@ interface StockTransferModalProps {
 }
 
 export function StockTransferModal({ isOpen, onClose }: StockTransferModalProps) {
-  const { activeTenant, branches, products, userRole, userName, refreshAllData } = useApp();
+  const { activeTenant, branches, products, refreshAllData } = useApp();
 
   const [fromBranchId, setFromBranchId] = useState(branches[0]?.id || '');
   const [toBranchId, setToBranchId] = useState(branches[1]?.id || branches[0]?.id || '');
@@ -42,8 +42,6 @@ export function StockTransferModal({ isOpen, onClose }: StockTransferModalProps)
         headers: {
           'Content-Type': 'application/json',
           'X-Tenant-ID': activeTenant.id,
-          'X-User-Role': userRole,
-          'X-User-Name': userName,
         },
         body: JSON.stringify({
           from_branch_id: fromBranchId,

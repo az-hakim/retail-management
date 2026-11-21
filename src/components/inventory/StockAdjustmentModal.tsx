@@ -10,7 +10,7 @@ interface StockAdjustmentModalProps {
 }
 
 export function StockAdjustmentModal({ isOpen, onClose }: StockAdjustmentModalProps) {
-  const { activeTenant, activeBranch, branches, products, userRole, userName, refreshAllData } = useApp();
+  const { activeTenant, activeBranch, branches, products, refreshAllData } = useApp();
 
   const [selectedBranchId, setSelectedBranchId] = useState(activeBranch?.id || branches[0]?.id || '');
   const [selectedProductId, setSelectedProductId] = useState(products[0]?.id || '');
@@ -35,8 +35,6 @@ export function StockAdjustmentModal({ isOpen, onClose }: StockAdjustmentModalPr
         headers: {
           'Content-Type': 'application/json',
           'X-Tenant-ID': activeTenant.id,
-          'X-User-Role': userRole,
-          'X-User-Name': userName,
         },
         body: JSON.stringify({
           branch_id: selectedBranchId,

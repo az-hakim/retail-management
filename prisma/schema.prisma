@@ -18,9 +18,10 @@ model Tenant {
   updated_at DateTime  @updatedAt
   deleted_at DateTime?
 
-  branches   Branch[]
-  users      User[]
-  categories Category[]
+  branches    Branch[]
+  users       User[]
+  memberships UserMembership[]
+  categories  Category[]
   products   Product[]
   sales      Sale[]
   ledger     StockLedger[]
@@ -52,22 +53,43 @@ model Branch {
 }
 
 model User {
-  id         String    @id @default(uuid())
-  tenant_id  String
-  tenant     Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  branch_id  String?
-  branch     Branch?   @relation(fields: [branch_id], references: [id], onDelete: SetNull)
-  name       String
-  email      String
-  role       String
-  pin        String?
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-  deleted_at DateTime?
+  id            String    @id @default(uuid())
+  /// Primary (default) tenant. Multi-tenant access lives in UserMembership.
+  tenant_id     String
+  tenant        Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  branch_id     String?
+  branch        Branch?   @relation(fields: [branch_id], references: [id], onDelete: SetNull)
+  name          String
+  email         String    @unique
+  role          String
+  /// scrypt$N$r$p$salt$derivedKey — never store plaintext passwords.
+  password_hash String?
+  is_active     Boolean   @default(true)
+  pin           String?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  deleted_at    DateTime?
 
-  @@unique([tenant_id, email])
+  memberships UserMembership[]
+
   @@index([tenant_id])
   @@map("users")
+}
+
+/// Authorization source of truth: role per tenant, optionally limited to one branch.
+model UserMembership {
+  id         String   @id @default(uuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tenant_id  String
+  tenant     Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  role       String
+  branch_id  String?
+  created_at DateTime @default(now())
+
+  @@unique([user_id, tenant_id])
+  @@index([tenant_id])
+  @@map("user_memberships")
 }
 
 model Category {

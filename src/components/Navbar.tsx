@@ -2,16 +2,16 @@
 
 import React from 'react';
 import { useApp } from '@/context/AppContext';
-import { UserRole } from '@/types';
 import {
   Store,
   MapPin,
-  Shield,
   Wifi,
   WifiOff,
   RefreshCw,
   Bell,
   Sparkles,
+  LogOut,
+  ShieldCheck,
 } from 'lucide-react';
 
 export function Navbar() {
@@ -23,7 +23,8 @@ export function Navbar() {
     activeBranch,
     setActiveBranch,
     userRole,
-    setUserRole,
+    userName,
+    logout,
     isSimulatedOffline,
     toggleSimulatedOffline,
     offlineQueueCount,
@@ -172,21 +173,36 @@ export function Navbar() {
           )}
         </div>
 
-        {/* RBAC Role Switcher */}
-        <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-700 dark:bg-zinc-800">
-          <Shield className="ml-1 h-3.5 w-3.5 shrink-0 text-zinc-600 dark:text-zinc-400" />
-          <select
-            aria-label="Simulate Role"
-            className="max-w-[6.5rem] cursor-pointer truncate bg-transparent text-xs font-semibold text-zinc-800 focus:outline-none sm:max-w-none dark:text-zinc-200"
-            value={userRole}
-            onChange={e => setUserRole(e.target.value as UserRole)}
+        {/* Signed-in identity + sign out */}
+        <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800">
+          <div
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-200 text-[10px] font-bold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-100"
+            aria-hidden="true"
           >
-            <option value="TENANT_OWNER">Owner</option>
-            <option value="BRANCH_MANAGER">Manager</option>
-            <option value="CASHIER">Cashier</option>
-            <option value="INVENTORY_CLERK">Inventory Clerk</option>
-            <option value="SUPER_ADMIN">Super Admin</option>
-          </select>
+            {userName
+              .split(' ')
+              .filter(Boolean)
+              .map(n => n[0])
+              .join('')
+              .slice(0, 2) || '—'}
+          </div>
+          <div className="hidden min-w-0 sm:block">
+            <p className="max-w-[9rem] truncate text-[11px] font-bold leading-tight text-zinc-900 dark:text-zinc-100">
+              {userName || 'Signed in'}
+            </p>
+            <p className="flex items-center gap-1 text-[10px] leading-tight text-zinc-500 dark:text-zinc-400">
+              <ShieldCheck className="h-2.5 w-2.5" />
+              <span className="truncate">{userRole.replace('_', ' ')}</span>
+            </p>
+          </div>
+          <button
+            onClick={logout}
+            title="Sign out"
+            aria-label="Sign out"
+            className="ml-0.5 flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-100"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </header>

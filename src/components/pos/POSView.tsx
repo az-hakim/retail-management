@@ -150,9 +150,9 @@ export function POSView() {
   const totalAmount = taxConfig.inclusive ? netTaxable : netTaxable + taxAmount;
 
   return (
-    <div className="flex flex-1 flex-col lg:flex-row gap-4 p-4 lg:p-6 overflow-hidden max-h-[calc(100vh-4rem)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 lg:flex-row lg:p-6">
       {/* Left Column: Barcode Scanner, Filters & Product Grid */}
-      <div className="flex flex-1 flex-col gap-4 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
         {/* Hardware Barcode Scanner bar */}
         <BarcodeScannerInput
           onScanSuccess={result => {
@@ -201,7 +201,7 @@ export function POSView() {
         </div>
 
         {/* Product Cards Grid */}
-        <div className="flex-1 overflow-y-auto pr-1">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
             {filteredProducts.map(product => {
               const branchStock = product.stock_by_branch[activeBranch.id] || 0;
@@ -279,7 +279,7 @@ export function POSView() {
       </div>
 
       {/* Right Column: Active Cart / Ticket Drawer */}
-      <div className="flex w-full lg:w-96 flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+      <div className="flex min-h-0 w-full flex-1 flex-col justify-between overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm lg:w-96 lg:flex-none dark:border-zinc-800 dark:bg-zinc-900">
         {/* Cart Header */}
         <div className="flex items-center justify-between border-b border-zinc-200 pb-3 dark:border-zinc-800">
           <div className="flex items-center gap-2">
@@ -314,7 +314,7 @@ export function POSView() {
         </div>
 
         {/* Cart Items List */}
-        <div className="flex-1 overflow-y-auto py-2 space-y-2 pr-1">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto py-2 pr-1">
           {cart.map((item, index) => (
             <div
               key={index}
